@@ -1,64 +1,15 @@
 <?php
-require_once __DIR__ . '/../config/db_connect.php';
-define('FPDF_FONTPATH', __DIR__ . '/../lib/fpdf/font/');
-require_once __DIR__ . '/../lib/fpdf/fpdf.php';
-
-// Fetch rows
-$search = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : '';
-$search_sql = '';
-if ($search !== '') {
-    $s = '%' . $conn->real_escape_string($search) . '%';
-    $search_sql = " AND (room_id LIKE '$s' OR building LIKE '$s' OR room_code LIKE '$s' OR capacity LIKE '$s')";
-}
-$sql = "SELECT * FROM tblroom WHERE deleted_at IS NULL $search_sql ORDER BY room_id DESC";
-$res = $conn->query($sql);
-
-// FPDF setup
-class PDF extends FPDF {
-
-    // Header
-    function Header() {
-        $this->SetFont('Arial','B',12);
-        $this->SetTextColor(128,0,0);
-        $this->Cell(0,6,'Polytechnic University of the Philippines - Taguig Campus',0,1,'C');
-        $this->Ln(2);
-        $this->SetTextColor(0,0,0);
-        $this->SetFont('Arial','B',10);
-        $this->SetFillColor(200,200,200);
-        // Column headings
-        $this->Cell(40,8,'Room ID',1,0,'C',true);
-        $this->Cell(35,8,'Building',1,0,'C',true);
-        $this->Cell(35,8,'Room Code',1,0,'C',true);
-        $this->Cell(50,8,'Capacity',1,1,'C',true); // note the last cell ends line
-    }
-
-    // Footer
-    function Footer() {
-        $this->SetY(-15);
-        $this->SetFont('Arial','I',8);
-        $this->Cell(0,6,'Printed: '.date('Y-m-d H:i').'    Page '.$this->PageNo().'/{nb}',0,0,'R');
-    }
-}
-
-// Create PDF
-$pdf = new PDF('P','mm','A4');
-$pdf->AliasNbPages();
-$pdf->SetAutoPageBreak(true,20);
-$pdf->AddPage();
-$pdf->SetFont('Arial','',9); // smaller font to fit longer text
-
-if ($res && $res->num_rows > 0) {
-    while ($r = $res->fetch_assoc()) {
-        $pdf->Cell(40,7,$r['room_id'],1,0); 
-        $pdf->Cell(35,7,$r['building'],1,0);      
-        $pdf->Cell(35,7,$r['room_code'],1,0);      
-        $pdf->Cell(50,7,$r['capacity'],1,1); // end line
-    }
-} else {
-    $pdf->Cell(0,8,'No records found.',1,1,'C');
-}
-
-// Output as download
-$filename = 'room_' . date('Ymd_His') . '.pdf';
-$pdf->Output('D', $filename);
-exit;
+include '../config/db_connect.php';
+header("Content-Type: application/vnd.ms-excel");
+header("Content-Disposition: attachment; filename=Room_Records.xls");
+header("Pragma: no-cache"); header("Expires: 0");
+$result = mysqli_query($conn, "SELECT * FROM tblroom WHERE deleted_at IS NULL ORDER BY room_id ASC");
+echo "<table border='1' style='border-collapse:collapse; text-align:center; width:100%;'>";
+echo "<tr><th colspan='4' style='font-size:16px; text-align:center; padding:8px;'>Polytechnic University of the Philippines - Taguig Campus</th></tr>";
+echo "<tr><th colspan='4' style='text-align:center; padding:6px;'>Room Records</th></tr>";
+echo "<tr><td colspan='4' style='height:10px;'></td></tr>";
+echo "<tr style='background-color:#f2f2f2; font-weight:bold;'><th>Room ID</th><th>Building</th><th>Room Code</th><th>Capacity</th></tr>";
+while($row=mysqli_fetch_assoc($result)) { 
+    echo "<tr><td>{$row['room_id']}</td><td>{$row['building']}</td><td>{$row['room_code']}</td><td>{$row['capacity']}</td></tr>"; }
+echo "</table>"; exit;
+?>
